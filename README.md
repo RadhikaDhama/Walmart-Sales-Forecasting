@@ -86,7 +86,7 @@ Access here : https://walmart-sales-forecasting-optvq2vtvh95bdxs9sps3d.streamlit
 
 ## Inventory Optimization Formulation
 
-$$\text{Safety Stock} = Z_{\text{service\_level}} \times \sigma \times \sqrt{\frac{\text{Lead Time}}{\text{Horizon}}}$$
+$$\text{Safety Stock} = Z_{\text{SLA}} \times \sigma \times \sqrt{\frac{\text{Lead Time}}{\text{Horizon}}}$$
 
 $$\text{Reorder Point (ROP)} = (\text{Daily Forecast} \times \text{Lead Time}) + \text{Safety Stock}$$
 
