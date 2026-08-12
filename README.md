@@ -1,4 +1,5 @@
 # Demand Forecasting & Inventory Optimization Engine
+Access here : https://walmart-sales-forecasting-optvq2vtvh95bdxs9sps3d.streamlit.app/
 
 An end-to-end pipeline that forecasts daily unit demand across Walmart's M5 dataset (30,490 SKU-store series), evaluates forecasts with the competition-correct WRMSSE metric, and converts those forecasts into actionable inventory decisions - safety stock and reorder points at different service levels.
 
