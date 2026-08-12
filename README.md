@@ -1,11 +1,11 @@
 # Demand Forecasting & Inventory Optimization Engine
 Access here : https://walmart-sales-forecasting-optvq2vtvh95bdxs9sps3d.streamlit.app/
 
-![PySpark](https://img.shields.io/badge/PySpark-3.4+-E25A1C?style=for-the-badge&logo=apachespark&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![XGBoost](https://img.shields.io/badge/XGBoost-Champion_Model-2EA043?style=for-the-badge&logo=xgboost&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-Live_Dashboard-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
-![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-ML_Pipeline-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
+[![PySpark](https://img.shields.io/badge/PySpark-3.4+-E25A1C?style=for-the-badge&logo=apachespark&logoColor=white)](https://spark.apache.org/docs/latest/api/python/)
+[![Time Series Analysis](https://img.shields.io/badge/Time--Series_Analysis-ADF_%7C_ACF%2FPACF_%7C_Ljung--Box-0052CC?style=for-the-badge&logo=python&logoColor=white)](https://www.statsmodels.org/stable/tsa.html)
+[![SARIMA](https://img.shields.io/badge/SARIMA-pmdarima_%7C_Auto--ARIMA-4B0082?style=for-the-badge&logo=scipy&logoColor=white)](https://alkaline-ml.com/pmdarima/)
+[![XGBoost](https://img.shields.io/badge/XGBoost-QuantileDMatrix-2EA043?style=for-the-badge&logo=xgboost&logoColor=white)](https://xgboost.readthedocs.io/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Live_Dashboard-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
 
 > **End-to-End Enterprise Supply Chain Pipeline**: Reshapes ~58.3M sales records in PySpark, benchmarks Statistical SARIMA vs Global XGBoost using competition-correct WRMSSE, and converts forecasts into dynamic Safety Stock & Reorder Points under SLA cost trade-offs.
 
@@ -15,12 +15,13 @@ Access here : https://walmart-sales-forecasting-optvq2vtvh95bdxs9sps3d.streamlit
 
 | Technical Domain | Skills & Technologies Applied |
 |---|---|
-| **Distributed Data Engineering** | **PySpark (Local Cluster)** — Reshaped 30,490 series wide→long (~58.3M rows), zero-leakage Window lag/rolling specs, Parquet I/O. |
-| **Statistical Time-Series** | **SARIMA (`pmdarima`)** — ADF Stationarity testing, ACF/PACF weekly seasonal ($s=7$) diagnostic order selection, Ljung-Box residual validation. |
-| **Machine Learning (GBDT)** | **Global XGBoost (`QuantileDMatrix`)** — Single cross-series model trained on 100% full dataset (55M+ rows), SNAP/price promotion elasticity. |
+| **[Time-Series Analysis](https://www.statsmodels.org/stable/tsa.html)** | **[ADF Stationarity Test](https://www.statsmodels.org/stable/generated/statsmodels.tsa.stattools.adfuller.html)**, **[ACF/PACF Diagnostic Plots](https://www.statsmodels.org/stable/graphics.html)** ($s=7$ weekly seasonality), **[Ljung-Box Residual Validation](https://www.statsmodels.org/stable/generated/statsmodels.stats.diagnostic.acorr_ljungbox.html)**. |
+| **[SARIMA Modeling](https://alkaline-ml.com/pmdarima/)** | **[Automated Order Selection (`pmdarima.auto_arima`)](https://alkaline-ml.com/pmdarima/modules/generated/pmdarima.arima.auto_arima.html)** — AIC minimization search across candidate $(p,d,q)(P,D,Q)_7$ orders on stratified samples. |
+| **Distributed Data Engineering** | **[PySpark (Local Cluster)](https://spark.apache.org/docs/latest/api/python/)** — Reshaped 30,490 series wide→long (~58.3M rows), zero-leakage Window lag/rolling specs, Parquet I/O. |
+| **Machine Learning (GBDT)** | **[Global XGBoost (`QuantileDMatrix`)](https://xgboost.readthedocs.io/)** — Single cross-series model trained on 100% full dataset (55M+ rows), SNAP/price promotion elasticity. |
 | **Metric Engineering** | **WRMSSE Metric** — Volatility-scaled & dollar revenue-weighted evaluation (fixing zero-inflated intermittent RMSE bias). |
 | **Operations Research** | **Inventory Optimization** — Dynamic Safety Stock & Reorder Point formulation across 90%, 95%, and 99% Service Levels. |
-| **Full-Stack Web App** | **Streamlit** — Interactive supply chain application with Plotly scenario planner & purchase order CSV export. |
+| **Full-Stack Web App** | **[Streamlit](https://streamlit.io/)** — Interactive supply chain application with Plotly scenario planner & purchase order CSV export. |
 
 ---
 
