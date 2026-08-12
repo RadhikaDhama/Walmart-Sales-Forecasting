@@ -17,7 +17,7 @@ Access here : https://walmart-sales-forecasting-optvq2vtvh95bdxs9sps3d.streamlit
 |---|---|
 | **Distributed Data Engineering** | **PySpark (Local Cluster)** — Reshaped 30,490 series wide→long (~58.3M rows), zero-leakage Window lag/rolling specs, Parquet I/O. |
 | **Statistical Time-Series** | **SARIMA (`pmdarima`)** — ADF Stationarity testing, ACF/PACF weekly seasonal ($s=7$) diagnostic order selection, Ljung-Box residual validation. |
-| **Machine Learning (GBDT)** | **Global XGBoost ** — Single cross-series model trained on 100% full dataset (55M+ rows), SNAP/price promotion elasticity. |
+| **Machine Learning (GBDT)** | **Global XGBoost (`QuantileDMatrix`)** — Single cross-series model trained on 100% full dataset (55M+ rows), SNAP/price promotion elasticity. |
 | **Metric Engineering** | **WRMSSE Metric** — Volatility-scaled & dollar revenue-weighted evaluation (fixing zero-inflated intermittent RMSE bias). |
 | **Operations Research** | **Inventory Optimization** — Dynamic Safety Stock & Reorder Point formulation across 90%, 95%, and 99% Service Levels. |
 | **Full-Stack Web App** | **Streamlit** — Interactive supply chain application with Plotly scenario planner & purchase order CSV export. |
@@ -27,7 +27,7 @@ Access here : https://walmart-sales-forecasting-optvq2vtvh95bdxs9sps3d.streamlit
 ## Executive Summary
 
 - **Problem:** Standard ML pipelines optimize for RMSE, ignoring intermittent zero-sales demand and asymmetrical stockout vs holding costs.
-- **Solution:** A 4-stage pipeline that predicts demand uncertainty ($\sigma$) and translates predictions into actionable purchase order triggers.
+- **Solution:** A 4-stage pipeline that predicts sales demand ($\hat{y}$) and calculates forecast residual volatility ($\sigma$) to derive actionable purchase order triggers.
 - **Production Result:** Global XGBoost Champion achieved **0.7679 WRMSSE** across all 30,490 series (**+26.7% error reduction** over baseline).
 
 ---
@@ -86,12 +86,22 @@ Access here : https://walmart-sales-forecasting-optvq2vtvh95bdxs9sps3d.streamlit
 
 ## Inventory Optimization Formulation
 
+The forecasting models (Global XGBoost Champion & SARIMA) predict **Daily Unit Sales Demand ($\hat{y}$)**. 
+
+To convert point sales predictions into operational purchasing decisions, **Forecast Residual Volatility ($\sigma$)** is calculated from the standard deviation of model prediction errors on held-out evaluation data:
+
+$$\sigma = \text{std}(y_{\text{actual}} - \hat{y}_{\text{predicted}})$$
+
 $$\text{Safety Stock} = Z_{\text{SLA}} \times \sigma \times \sqrt{\frac{\text{Lead Time}}{\text{Horizon}}}$$
 
-$$\text{Reorder Point (ROP)} = (\text{Daily Forecast} \times \text{Lead Time}) + \text{Safety Stock}$$
+$$\text{Reorder Point (ROP)} = (\text{Daily Sales Forecast} \times \text{Lead Time}) + \text{Safety Stock}$$
+
+- **Sales Forecast ($\hat{y}$):** Dictates expected inventory depletion during supplier lead time.
+- **Error Volatility ($\sigma$):** Dictates the extra Safety Stock buffer required to absorb prediction uncertainty and guarantee target Service Level (e.g. 95% SLA).
 
 **Real-World Example (`FOODS_3_473 @ WI_3`):**
-- **28-Day Demand Forecast:** 73.0 units | **Residual Volatility ($\sigma$):** 2.22
+- **28-Day Demand Forecast ($\hat{y}$):** 73.0 units (2.61 units/day)
+- **Model Residual Volatility ($\sigma$):** 2.22 ($\text{std}(y - \hat{y})$ error volatility)
 - **Lead Time:** 3 Days | **Target SLA:** 95% ($Z = 1.64$)
 - **Result:** Safety Stock = **1.2 units** $\rightarrow$ Reorder Point = **9.0 units**.
 
