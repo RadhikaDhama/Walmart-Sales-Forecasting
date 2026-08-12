@@ -108,7 +108,7 @@ $$\text{Reorder Point (ROP)} = (\text{Daily Sales Forecast} \times \text{Lead Ti
 ---
 
 <details>
-<summary><b>🔍 Deep Dive: Pipeline Execution Phases</b></summary>
+<summary><b>Deep Dive: Pipeline Execution Phases</b></summary>
 
 ### 1. Data & Feature Engineering (PySpark)
 - Reshaped 1,913 daily sales columns into long format (~58.3M rows).
@@ -126,7 +126,7 @@ $$\text{Reorder Point (ROP)} = (\text{Daily Sales Forecast} \times \text{Lead Ti
 </details>
 
 <details>
-<summary><b>⚠️ Scope & Operational Limitations</b></summary>
+<summary><b> Scope & Operational Limitations</b></summary>
 
 - **Revenue Weighting:** Uses `sales × sell_price` summed over historical training period — a close proxy for the official M5 competition weights.
 - **SARIMA Benchmarking:** Benchmarked on 30 stratified series by design ($O(N)$ computational runtime does not scale to 30,490 series).
