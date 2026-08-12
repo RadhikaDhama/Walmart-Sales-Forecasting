@@ -17,7 +17,7 @@ Access here : https://walmart-sales-forecasting-optvq2vtvh95bdxs9sps3d.streamlit
 |---|---|
 | **Distributed Data Engineering** | **PySpark (Local Cluster)** — Reshaped 30,490 series wide→long (~58.3M rows), zero-leakage Window lag/rolling specs, Parquet I/O. |
 | **Statistical Time-Series** | **SARIMA (`pmdarima`)** — ADF Stationarity testing, ACF/PACF weekly seasonal ($s=7$) diagnostic order selection, Ljung-Box residual validation. |
-| **Machine Learning (GBDT)** | **Global XGBoost (`QuantileDMatrix`)** — Single cross-series model trained on 100% full dataset (55M+ rows), SNAP/price promotion elasticity. |
+| **Machine Learning (GBDT)** | **Global XGBoost ** — Single cross-series model trained on 100% full dataset (55M+ rows), SNAP/price promotion elasticity. |
 | **Metric Engineering** | **WRMSSE Metric** — Volatility-scaled & dollar revenue-weighted evaluation (fixing zero-inflated intermittent RMSE bias). |
 | **Operations Research** | **Inventory Optimization** — Dynamic Safety Stock & Reorder Point formulation across 90%, 95%, and 99% Service Levels. |
 | **Full-Stack Web App** | **Streamlit** — Interactive supply chain application with Plotly scenario planner & purchase order CSV export. |
