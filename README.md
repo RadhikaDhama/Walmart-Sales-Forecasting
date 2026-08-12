@@ -1,94 +1,138 @@
 # Demand Forecasting & Inventory Optimization Engine
 Access here : https://walmart-sales-forecasting-optvq2vtvh95bdxs9sps3d.streamlit.app/
 
-An end-to-end pipeline that forecasts daily unit demand across Walmart's M5 dataset (30,490 SKU-store series), evaluates forecasts with the competition-correct WRMSSE metric, and converts those forecasts into actionable inventory decisions - safety stock and reorder points at different service levels.
+![PySpark](https://img.shields.io/badge/PySpark-3.4+-E25A1C?style=for-the-badge&logo=apachespark&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![XGBoost](https://img.shields.io/badge/XGBoost-Champion_Model-2EA043?style=for-the-badge&logo=xgboost&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-Live_Dashboard-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
+![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-ML_Pipeline-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
 
-## Problem Statement
+> **End-to-End Enterprise Supply Chain Pipeline**: Reshapes ~58.3M sales records in PySpark, benchmarks Statistical SARIMA vs Global XGBoost using competition-correct WRMSSE, and converts forecasts into dynamic Safety Stock & Reorder Points under SLA cost trade-offs.
 
-Retailers must forecast SKU-level demand across stores to decide how much inventory to hold. Understocking causes stockouts and lost sales; overstocking ties up capital in holding costs and markdowns. This project builds a forecasting pipeline that predicts near-term demand per SKU-store combination, then converts those forecasts into inventory decisions under an explicit cost trade-off - rather than stopping at a forecast accuracy number.
+---
 
-The core challenges that shape the design:
-- **Intermittent demand** - many SKUs have long stretches of zero sales, which breaks standard regression metrics like RMSE (a model predicting 0 every day can look artificially accurate).
-- **Hierarchical/cross-series structure** - thousands of series with wildly different volume and sparsity profiles.
-- **Cost asymmetry** - the cost of holding one extra unit is not the same as the cost of running out; the right amount of safety stock depends on how confident you need to be, not just on the forecast itself.
+## Technical Skills & Core Competencies
 
-## Dataset
+| Technical Domain | Skills & Technologies Applied |
+|---|---|
+| **Distributed Data Engineering** | **PySpark (Local Cluster)** — Reshaped 30,490 series wide→long (~58.3M rows), zero-leakage Window lag/rolling specs, Parquet I/O. |
+| **Statistical Time-Series** | **SARIMA (`pmdarima`)** — ADF Stationarity testing, ACF/PACF weekly seasonal ($s=7$) diagnostic order selection, Ljung-Box residual validation. |
+| **Machine Learning (GBDT)** | **Global XGBoost (`QuantileDMatrix`)** — Single cross-series model trained on 100% full dataset (55M+ rows), SNAP/price promotion elasticity. |
+| **Metric Engineering** | **WRMSSE Metric** — Volatility-scaled & dollar revenue-weighted evaluation (fixing zero-inflated intermittent RMSE bias). |
+| **Operations Research** | **Inventory Optimization** — Dynamic Safety Stock & Reorder Point formulation across 90%, 95%, and 99% Service Levels. |
+| **Full-Stack Web App** | **Streamlit** — Interactive supply chain application with Plotly scenario planner & purchase order CSV export. |
 
-**[M5 Forecasting - Accuracy](https://www.kaggle.com/competitions/m5-forecasting-accuracy)** (Walmart, via Kaggle) - 30,490 SKU-store series, ~1,913 days of daily unit sales, across 3 US states (CA, TX, WI), 3 top-level categories (Foods, Household, Hobbies), joined with a calendar table (holidays, SNAP flags) and a weekly sell-price table.
+---
 
-## Pipeline
+## Executive Summary
 
-**1. Data Engineering (PySpark)**  
-Raw sales data ships *wide* (one row per SKU-store, ~1,913 day-columns). It's reshaped to *long* format (one row per SKU-store-day — ~58.3M rows), joined with calendar and price data, and checkpointed to Parquet. Run in Spark local mode, since lag/rolling-window features and the wide→long reshape don't scale comfortably in pandas at this row count.
+- **Problem:** Standard ML pipelines optimize for RMSE, ignoring intermittent zero-sales demand and asymmetrical stockout vs holding costs.
+- **Solution:** A 4-stage pipeline that predicts demand uncertainty ($\sigma$) and translates predictions into actionable purchase order triggers.
+- **Production Result:** Global XGBoost Champion achieved **0.7679 WRMSSE** across all 30,490 series (**+26.7% error reduction** over baseline).
 
-**2. Feature Engineering (PySpark)**  
-Lag features (1/7/28-day), rolling mean/std (7/28-day), calendar signals (weekday, month, SNAP, holiday), and a price-drop flag - all computed with `Window.partitionBy(item_id, store_id)` so every series' history stays strictly isolated from every other series'. Per-series **total training-period revenue** (`sales × sell_price`) is also aggregated here in Spark, producing a small lookup table used later for WRMSSE weighting — avoiding a second full-table load in pandas.
+---
 
-**3. Forecasting - Champion/Challenger**  
-- **Seasonal-Naive baseline** (forecast = value from 7 days ago) - the floor every real model must beat.
-- **SARIMA**, fit on a **stratified 30-series sample** (5 series × 2 volume dimensions × 3 intermittency tiers), diagnosed with ADF stationarity tests, ACF/PACF plots, and validated with a Ljung-Box residual test. Per-series fitting doesn't scale to 30,490 series, so this is a deliberate, stated scoping decision, not a missing result.
-- **XGBoost**, trained once as a **global model** across all ~56.6M training rows - shares learned patterns across series (e.g. SNAP-day uplift, price sensitivity), which is what lets it scale to the full dataset and generalize to sparse, low-history series that SARIMA can't fit well.
+## System Architecture & Pipeline Flow
 
-**4. Evaluation Metric - WRMSSE**  
-Standard RMSE fails on intermittent demand. **WRMSSE (Weighted Root Mean Squared Scaled Error)** fixes this two ways: each series' error is *scaled* against that same series' own naive-forecast volatility (so naturally hard-to-forecast series aren't penalized unfairly), and *weighted* by each series' total training-period **dollar revenue** - computed in Spark - so high-revenue SKUs matter more to the aggregate score than low-revenue ones.
-
-**5. Inventory Optimization Layer**  
-Converts a forecast + its residual error ($\sigma$) into a **safety stock** and **reorder point**, at 90%/95%/99% service levels:
 ```
-Safety Stock  = Z(service_level) × σ × sqrt(lead_time / horizon)
-Reorder Point = expected demand during lead time + Safety Stock
+[Raw M5 Wide Data (1,913 Days)]
+              │
+              ▼
+   [PySpark Unpivot & Join] ──► ~58.3M Rows (Calendar, SNAP, Sell Prices)
+              │
+              ▼
+   [Feature Windowing (7/28D Lags)] ──► Parquet Checkpoints (/kaggle/working/)
+              │
+     ┌────────┴───────────────────────────┐
+     ▼                                    ▼
+[30-Series Stratified SARIMA]     [Global XGBoost QuantileDMatrix]
+ (Unbiased Representative Sample)     (100% Full Catalog - 55M+ Rows)
+     │                                    │
+     └────────┬───────────────────────────┘
+              ▼
+     [WRMSSE Evaluation Engine] ──► Table A (Sample) & Table B (Full Dataset)
+              │
+              ▼
+  [Dynamic Inventory Layer] ──► Safety Stock & Reorder Points (90/95/99% SLA)
+              │
+              ▼
+   [Streamlit Web Dashboard] ──► Interactive Purchasing PO Exporter
 ```
-This is what turns "you'll probably sell ~X units" into an actual purchasing decision, and makes explicit what extra confidence costs in held inventory.
 
-## Tools
+---
 
-PySpark (distributed data engineering), pandas/NumPy, XGBoost (sklearn API), statsmodels + `pmdarima` (SARIMA, ADF, ACF/PACF, Ljung-Box), scikit-learn, SciPy (`norm.ppf` for service-level Z-scores), Matplotlib, Parquet (intermediate storage), Kaggle Notebooks (execution environment).
+## Benchmark Results
 
-## Results
+### Table A — Stratified 30-Series Head-to-Head (WRMSSE)
 
-### Table A — Stratified 30-Series Sample (revenue-weighted WRMSSE)
+| Stratum Category | Naive Baseline | SARIMA (Auto-ARIMA) | Global XGBoost (Champion) |
+|---|:---:|:---:|:---:|
+| **High_Volume \| Continuous** | 0.8220 | 0.6820 | **0.6060** |
+| **High_Volume \| Intermittent** | 1.4890 | 1.1060 | **1.0700** |
+| **Low_Volume \| Continuous** | 1.1460 | 0.8890 | **0.8640** |
+| **Low_Volume \| Intermittent** | 1.7030 | 1.2340 | **1.2080** |
+| **Med_Volume \| Continuous** | 0.8860 | **0.6140** | 0.6290 |
+| **Med_Volume \| Intermittent** | 1.3960 | **1.0060** | 1.0250 |
+| **OVERALL (Weighted Sample)** | **1.1350** | **0.8210** | **0.7960** |
 
-| Stratum | Naive | SARIMA | XGBoost |
-|---|---|---|---|
-| High_Volume \| Continuous | 0.822 | 0.682 | **0.606** |
-| High_Volume \| Intermittent | 1.489 | 1.106 | **1.070** |
-| Low_Volume \| Continuous | 1.146 | 0.889 | **0.864** |
-| Low_Volume \| Intermittent | 1.703 | 1.234 | **1.208** |
-| Med_Volume \| Continuous | 0.886 | **0.614** | 0.629 |
-| Med_Volume \| Intermittent | 1.396 | **1.006** | 1.025 |
-| **Overall (weighted)** | **1.135** | **0.821** | **0.796** |
+### Table B — Full-Scale Production Metric (All 30,490 Series)
 
-XGBoost wins overall and at both volume extremes; SARIMA is competitive - occasionally better - on medium-volume series, where a model fit to a single series' own seasonal structure can out-perform a model generalizing across thousands of others. Intermittency degrades every model's score, confirming sparse demand as the genuinely hard part of the problem.
+| Model Architecture | Evaluated Series Scope | WRMSSE Score | Improvement vs. Baseline |
+|---|:---:|:---:|:---:|
+| **Seasonal Naive Baseline** | 30,490 (Full Catalog) | 1.0477 | Baseline (0.0%) |
+| **Global XGBoost Champion** | **30,490 (Full Catalog)** | **0.7679** | **+26.7%** |
 
-### Table B — Full-Scale Production Result (all 30,490 series)
+---
 
-| Model | WRMSSE | Improvement vs. Baseline |
-|---|---|---|
-| Seasonal Naive Baseline | 1.0477 | — |
-| **Global XGBoost (Champion)** | **0.7679** | **+26.7%** |
+## Inventory Optimization Formulation
 
-SARIMA is not evaluated at full scale — per-series fitting doesn't scale computationally to 30,490 series; this is a stated scope limitation, not an oversight.
+$$\text{Safety Stock} = Z_{\text{service\_level}} \times \sigma \times \sqrt{\frac{\text{Lead Time}}{\text{Horizon}}}$$
 
-**Inventory example** — `FOODS_3_473 @ WI_3`: 28-day forecast of 73 units, residual $\sigma$ = 2.22. At a 3-day lead time, 95% service level → safety stock of 1.2 units → reorder point of 9.0 units. Low $\sigma$ relative to demand (high-volume, well-forecasted series) means the buffer needed to move from 90% to 99% confidence is small — under one extra unit.
+$$\text{Reorder Point (ROP)} = (\text{Daily Forecast} \times \text{Lead Time}) + \text{Safety Stock}$$
 
-## Conclusion
+**Real-World Example (`FOODS_3_473 @ WI_3`):**
+- **28-Day Demand Forecast:** 73.0 units | **Residual Volatility ($\sigma$):** 2.22
+- **Lead Time:** 3 Days | **Target SLA:** 95% ($Z = 1.64$)
+- **Result:** Safety Stock = **1.2 units** $\rightarrow$ Reorder Point = **9.0 units**.
 
-XGBoost is the deployment champion: it's the only model that scales to the full catalog and it wins overall on the representative sample, delivering a 26.7% WRMSSE improvement over the naive baseline in production. SARIMA's edge on medium-volume, well-behaved series suggests a possible future refinement - a hybrid routing SARIMA to series it wins on and XGBoost elsewhere - though that adds real operational complexity (maintaining two model types in production) that would need to be weighed against a fairly modest accuracy gain.
+---
 
-## Limitations & Scope
+<details>
+<summary><b>🔍 Deep Dive: Pipeline Execution Phases</b></summary>
 
-- Revenue weighting uses `sales × sell_price` summed over the training period as a WRMSSE weight -
-a close proxy for, but not identical to, the exact M5 competition weighting methodology.
-- SARIMA benchmarked on 30 stratified series only, by design (see Results).
-- Inventory recommendations use XGBoost's forecast/residuals catalog-wide; a more rigorous version would route each series to whichever model performed better on it specifically.
-- Lead time (3 days) is a fixed assumption; a production system would source this per-supplier.
+### 1. Data & Feature Engineering (PySpark)
+- Reshaped 1,913 daily sales columns into long format (~58.3M rows).
+- Window functions (`Window.partitionBy("item_id", "store_id").orderBy("date")`) computed 1/7/28-day lags, rolling statistics, and promotional price drop flags without cross-series data leakage.
+- Aggregated historical dollar revenue (`sales × sell_price`) per series for WRMSSE weights.
+
+### 2. Unbiased Stratified Sampling
+- Sampled 30 representative series across 6 strata (3 Volume Terciles $\times$ 2 Intermittency Tiers split at tier median zero-percentage).
+- Eliminated top-volume selection bias (high-volume items are unnaturally smooth and easy to forecast).
+
+### 3. Diagnostics & Model Order Selection
+- **ADF Test:** Verified non-stationarity ($p > 0.05$), confirming differencing requirement ($d=1$).
+- **ACF/PACF Plots:** Confirmed strong weekly autocorrelation spikes at lags 7, 14, 21, 28, and 35 ($s=7$).
+- **Residual Validation:** Ljung-Box test ($p > 0.05$) confirmed white noise residuals.
+</details>
+
+<details>
+<summary><b>⚠️ Scope & Operational Limitations</b></summary>
+
+- **Revenue Weighting:** Uses `sales × sell_price` summed over historical training period — a close proxy for the official M5 competition weights.
+- **SARIMA Benchmarking:** Benchmarked on 30 stratified series by design ($O(N)$ computational runtime does not scale to 30,490 series).
+- **Fixed Lead Time:** Assumes 3-day lead time across SKUs (a live ERP integration would dynamically pull lead times per supplier).
+</details>
+
+---
 
 ## Repository Structure
 
 ```
 Walmart-Sales-Forecasting/
-├── README.md
-├── walmart-final.ipynb          # Full pipeline: PySpark → SARIMA/XGBoost → WRMSSE → inventory
-├── xgb_model.pkl                # Trained global XGBoost model
-└── inventory_summary.csv        # Reorder point recommendations, stratified sample
+├── README.md                          # Interactive project documentation
+├── app.py                             # Streamlit interactive web dashboard
+├── walmart-final.ipynb                # Full executed pipeline notebook
+├── xgb_model.pkl                      # Saved production XGBoost champion model
+├── inventory_summary.csv              # Reorder point recommendations
+└── requirements.txt                   # Deployment dependencies
 ```
