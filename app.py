@@ -8,97 +8,85 @@ import os
 import joblib
 
 # ==============================================================================
-# PAGE CONFIGURATION & CUSTOM CSS (GLASSMORPHISM DARK THEME)
+# PAGE CONFIGURATION & CUSTOM CSS (PROFESSIONAL DARK THEME)
 # ==============================================================================
 st.set_page_config(
     page_title="Walmart Demand Forecasting & Inventory Engine",
-    page_icon="🛒",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Outfit:wght@400;600;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap');
 
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
     }
 
-    /* Dark Modern Background */
+    /* Dark Modern Professional Background */
     .stApp {
-        background-color: #0d1117;
+        background-color: #0b0f19;
         color: #c9d1d9;
     }
 
-    /* Glassmorphism Cards */
+    /* Corporate Card Containers */
     .metric-card {
-        background: rgba(22, 27, 34, 0.85);
-        border: 1px solid rgba(48, 54, 61, 0.8);
-        border-radius: 12px;
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
         padding: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        backdrop-filter: blur(8px);
-        transition: transform 0.2s ease, border-color 0.2s ease;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        transition: border-color 0.2s ease;
     }
     .metric-card:hover {
-        transform: translateY(-2px);
         border-color: #58a6ff;
     }
 
-    /* Custom Metric Display */
+    /* Metric Display Typography */
     .metric-title {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.8px;
         color: #8b949e;
         margin-bottom: 6px;
     }
     .metric-value {
         font-family: 'Outfit', sans-serif;
-        font-size: 2.1rem;
-        font-weight: 800;
+        font-size: 2rem;
+        font-weight: 700;
         color: #f0f6fc;
     }
     .metric-subtitle {
         font-size: 0.8rem;
         color: #3fb950;
-        font-weight: 600;
-        margin-top: 4px;
-    }
-    .metric-subtitle-negative {
-        font-size: 0.8rem;
-        color: #f85149;
-        font-weight: 600;
+        font-weight: 500;
         margin-top: 4px;
     }
 
     /* Section Headers */
     .section-header {
         font-family: 'Outfit', sans-serif;
-        font-size: 1.5rem;
+        font-size: 1.35rem;
         font-weight: 700;
         color: #f0f6fc;
-        border-bottom: 2px solid #21262d;
+        border-bottom: 1px solid #21262d;
         padding-bottom: 8px;
-        margin-top: 24px;
+        margin-top: 20px;
         margin-bottom: 16px;
     }
 
-    /* Callout Alert Box */
+    /* Recommendation Box */
     .recommendation-box {
-        background: linear-gradient(135deg, rgba(35, 134, 54, 0.15), rgba(46, 160, 67, 0.05));
-        border-left: 4px solid #2ea043;
-        border-radius: 8px;
+        background-color: rgba(46, 160, 67, 0.08);
+        border-left: 3px solid #2ea043;
+        border-radius: 6px;
         padding: 16px 20px;
         margin: 16px 0;
-    }
-
-    /* Styled Tables */
-    .dataframe {
-        border-radius: 8px !important;
-        overflow: hidden !important;
+        color: #e6edf3;
+        font-size: 0.95rem;
+        line-height: 1.5;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -112,7 +100,6 @@ def load_inventory_summary():
     if os.path.exists(file_path):
         return pd.read_csv(file_path)
     else:
-        # Fallback dummy data if file is missing
         data = {
             "item_id": ["FOODS_3_473", "HOUSEHOLD_1_019", "FOODS_1_018", "FOODS_3_109", "FOODS_3_750"],
             "store_id": ["WI_3", "CA_2", "TX_1", "CA_4", "TX_2"],
@@ -141,13 +128,11 @@ model = load_model()
 # SIDEBAR CONTROLS & SCENARIO PLANNER
 # ==============================================================================
 with st.sidebar:
-    st.image("https://upload.wikimedia.org/wikipedia/commons/1/14/Walmart_Spark.svg", width=50)
     st.title("Supply Chain Controls")
     st.markdown("---")
     
-    st.subheader("⚙️ Scenario Parameters")
+    st.subheader("Scenario Parameters")
     
-    # Preset Selector
     preset = st.selectbox(
         "Quick Scenario Preset",
         ["Custom Settings", "Conservative (99% Service Level)", "Balanced Operational (95%)", "Lean Inventory (90%)"]
@@ -168,7 +153,7 @@ with st.sidebar:
         max_value=99.9,
         value=default_sl,
         step=0.5,
-        help="Probability of NOT encountering a stockout during order lead time."
+        help="Probability of avoiding a stockout during order lead time."
     )
     
     lead_time_days = st.slider(
@@ -177,13 +162,12 @@ with st.sidebar:
         max_value=14,
         value=default_lt,
         step=1,
-        help="Time elapsed between issuing a purchase order and receiving stock."
+        help="Elapsed time between order placement and inventory arrival."
     )
     
     st.markdown("---")
-    st.subheader("🎯 SKU Selector")
+    st.subheader("SKU Selection")
     
-    # Filter options
     stratum_filter = st.multiselect(
         "Filter by Stratum",
         options=inv_summary_df["stratum"].unique(),
@@ -199,14 +183,14 @@ with st.sidebar:
     selected_sku_str = st.selectbox("Select SKU-Store Series", sku_options)
     
     st.markdown("---")
-    st.markdown("**Model Champion:** Global XGBoost Regressor")
-    st.markdown("**Evaluation Metric:** WRMSSE")
+    st.caption("**Model Champion:** Global XGBoost Regressor")
+    st.caption("**Evaluation Metric:** WRMSSE")
 
 # Parse selected SKU
 selected_item, selected_store = selected_sku_str.split(" @ ")
 sku_row = inv_summary_df[(inv_summary_df.item_id == selected_item) & (inv_summary_df.store_id == selected_store)].iloc[0]
 
-# Calculate dynamic inventory values based on user inputs
+# Dynamic Inventory Calculations
 HORIZON = 28
 forecast_28d = float(sku_row["forecast_28d"])
 sigma = float(sku_row["sigma"])
@@ -220,7 +204,7 @@ reorder_point = lead_time_demand + safety_stock
 # ==============================================================================
 # MAIN HEADER & KPI CARDS
 # ==============================================================================
-st.title("🛒 Walmart Demand Forecasting & Inventory Optimization Engine")
+st.title("Walmart Demand Forecasting & Inventory Engine")
 st.markdown("Production-grade demand forecasting pipeline (PySpark + XGBoost) translated into dynamic safety stock and reorder point recommendations.")
 
 col1, col2, col3, col4 = st.columns(4)
@@ -230,14 +214,14 @@ with col1:
     <div class="metric-card">
         <div class="metric-title">Catalog Production WRMSSE</div>
         <div class="metric-value">0.7679</div>
-        <div class="metric-subtitle">▲ +26.7% vs Naive Baseline (1.0477)</div>
+        <div class="metric-subtitle">+26.7% vs Naive Baseline (1.0477)</div>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-title">Active Target Service Level</div>
+        <div class="metric-title">Target Service Level</div>
         <div class="metric-value">{target_service_level:.1f}%</div>
         <div class="metric-subtitle">Z-Score: {z_score:.2f}</div>
     </div>
@@ -255,9 +239,9 @@ with col3:
 with col4:
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-title">Evaluated Catalog Scope</div>
+        <div class="metric-title">Evaluated Series Scope</div>
         <div class="metric-value">30,490</div>
-        <div class="metric-subtitle">SKU-Store Series (PySpark ~58.3M Rows)</div>
+        <div class="metric-subtitle">SKU-Store Series (~58.3M Rows)</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -267,10 +251,10 @@ st.markdown("<br>", unsafe_allow_html=True)
 # NAVIGATION TABS
 # ==============================================================================
 tab1, tab2, tab3, tab4 = st.tabs([
-    "📦 Inventory Decision Engine",
-    "📊 Champion / Challenger Benchmark",
-    "🧠 Feature Importance & Explainability",
-    "📋 Batch Purchase Order Generator"
+    "Inventory Decision Engine",
+    "Champion / Challenger Benchmark",
+    "Feature Importance & Explainability",
+    "Batch Purchase Order Generator"
 ])
 
 # ------------------------------------------------------------------------------
@@ -278,32 +262,32 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # ------------------------------------------------------------------------------
 with tab1:
     st.markdown(f"<div class='section-header'>Inventory Decision Summary — {selected_item} ({selected_store})</div>", unsafe_allow_html=True)
-    st.markdown(f"**Stratum Category:** `{sku_row['stratum']}`")
+    st.markdown(f"**Stratum:** `{sku_row['stratum']}`")
     
     kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
     with kpi_col1:
         st.metric("28-Day Demand Forecast", f"{forecast_28d:.1f} units", f"{daily_demand:.2f} units/day")
     with kpi_col2:
-        st.metric("Model Residual Volatility (σ)", f"{sigma:.2f}", "Forecast Error Standard Deviation")
+        st.metric("Model Residual Volatility (σ)", f"{sigma:.2f}", "Forecast Error Std Dev")
     with kpi_col3:
-        st.metric("Dynamic Safety Stock", f"{safety_stock:.1f} units", f"Target SLA: {target_service_level:.1f}%")
+        st.metric("Dynamic Safety Stock", f"{safety_stock:.1f} units", f"SLA: {target_service_level:.1f}%")
     with kpi_col4:
-        st.metric("Reorder Point (ROP)", f"{reorder_point:.1f} units", f"Lead Time: {lead_time_days} Days", delta_color="normal")
+        st.metric("Reorder Point (ROP)", f"{reorder_point:.1f} units", f"Lead Time: {lead_time_days} Days")
         
     st.markdown(f"""
     <div class="recommendation-box">
-        <strong>📋 Purchase Order Trigger Recommendation:</strong><br>
-        When active stock for <strong>{selected_item} @ {selected_store}</strong> falls to or below <strong>{reorder_point:.1f} units</strong>, 
-        trigger a replenishment order for <strong>{forecast_28d:.0f} units</strong>. This guarantees a <strong>{target_service_level:.1f}% service level</strong> 
-        (less than {100 - target_service_level:.1f}% risk of stockout during the {lead_time_days}-day supplier lead time).
+        <strong>Replenishment Recommendation:</strong><br>
+        When active stock for <strong>{selected_item} @ {selected_store}</strong> drops to or below <strong>{reorder_point:.1f} units</strong>, 
+        issue a purchase order for <strong>{forecast_28d:.0f} units</strong>. This maintains a <strong>{target_service_level:.1f}% service level</strong> 
+        (less than {100 - target_service_level:.1f}% stockout risk over the {lead_time_days}-day lead time window).
     </div>
     """, unsafe_allow_html=True)
     
     col_chart1, col_chart2 = st.columns(2)
     
     with col_chart1:
-        st.subheader("📈 Service Level vs Safety Stock Cost Curve")
-        st.caption("Demonstrates the non-linear holding cost curve when pushing service levels above 95%.")
+        st.subheader("Service Level vs Safety Stock Cost Curve")
+        st.caption("Illustrates the non-linear increase in safety buffer required above 95% service level.")
         
         sl_range = np.linspace(80.0, 99.9, 100)
         z_range = norm.ppf(sl_range / 100.0)
@@ -314,15 +298,14 @@ with tab1:
             x=sl_range, y=ss_range,
             mode='lines',
             name='Safety Stock (Units)',
-            line=dict(color='#58a6ff', width=3)
+            line=dict(color='#58a6ff', width=2.5)
         ))
         
-        # Highlight active point
         fig_curve.add_trace(go.Scatter(
             x=[target_service_level], y=[safety_stock],
             mode='markers+text',
-            name='Active Target',
-            marker=dict(color='#f85149', size=12, symbol='diamond'),
+            name='Selected Target',
+            marker=dict(color='#f85149', size=10, symbol='circle'),
             text=[f"{safety_stock:.1f} units"],
             textposition="top left"
         ))
@@ -339,8 +322,8 @@ with tab1:
         st.plotly_chart(fig_curve, use_container_width=True)
 
     with col_chart2:
-        st.subheader("📅 Simulated 28-Day Inventory Trajectory")
-        st.caption("Visualizes expected demand consumption, reorder threshold, and safety buffer.")
+        st.subheader("Simulated 28-Day Inventory Trajectory")
+        st.caption("Visualizes projected inventory depletion against reorder point and safety floor.")
         
         days = np.arange(1, 29)
         cum_demand = daily_demand * days
@@ -349,21 +332,21 @@ with tab1:
         fig_traj = go.Figure()
         fig_traj.add_trace(go.Scatter(
             x=days, y=simulated_stock,
-            mode='lines+markers',
+            mode='lines',
             name='Projected Stock On Hand',
-            line=dict(color='#3fb950', width=3)
+            line=dict(color='#3fb950', width=2.5)
         ))
         fig_traj.add_trace(go.Scatter(
             x=[1, 28], y=[reorder_point, reorder_point],
             mode='lines',
             name='Reorder Point (ROP)',
-            line=dict(color='#d29922', width=2, dash='dash')
+            line=dict(color='#d29922', width=1.8, dash='dash')
         ))
         fig_traj.add_trace(go.Scatter(
             x=[1, 28], y=[safety_stock, safety_stock],
             mode='lines',
             name='Safety Stock Floor',
-            line=dict(color='#f85149', width=2, dash='dot')
+            line=dict(color='#f85149', width=1.8, dash='dot')
         ))
         
         fig_traj.update_layout(
@@ -385,14 +368,14 @@ with tab2:
     
     st.markdown("""
     **Evaluation Protocol:**
-    - **Table A (Stratified Head-to-Head 30-Series Sample):** Compares Seasonal-Naive Baseline, Statistical SARIMA, and Global XGBoost on identical stratified representative series across Volume Terciles and Intermittency Tiers.
-    - **Table B (Full Catalog Production Metric):** Compares Seasonal Naive against Global XGBoost Champion across all **30,490 series** (~58.3 Million long rows).
+    - **Table A (Stratified Head-to-Head 30-Series Sample):** Compares Seasonal-Naive Baseline, Statistical SARIMA, and Global XGBoost on identical stratified series across Volume Terciles and Intermittency Tiers.
+    - **Table B (Full Catalog Production Metric):** Compares Seasonal Naive against Global XGBoost Champion across all **30,490 series** (~58.3 Million rows).
     """)
     
     col_t1, col_t2 = st.columns([3, 2])
     
     with col_t1:
-        st.subheader("Table A — Stratified 30-Series Head-to-Head (WRMSSE)")
+        st.subheader("Table A — Stratified 30-Series Sample (WRMSSE)")
         table_a_data = {
             "Stratum": [
                 "High_Volume | Continuous",
@@ -421,10 +404,9 @@ with tab2:
         df_table_b = pd.DataFrame(table_b_data)
         st.dataframe(df_table_b, use_container_width=True)
         
-        st.info("💡 **Takeaway:** Global XGBoost delivers a **26.7% error reduction** over baseline across the full catalog by learning cross-series signals (SNAP benefits, price discounts).")
+        st.info("**Key Insight:** Global XGBoost delivers a **26.7% error reduction** over baseline across the full catalog by learning cross-series signals (SNAP benefits, price discounts).")
 
-    # Bar chart comparison
-    st.subheader("📊 Error Comparison Across Strata (Lower is Better)")
+    st.subheader("Error Comparison Across Strata (Lower is Better)")
     df_plot_a = df_table_a[df_table_a["Stratum"] != "OVERALL (Weighted Sample WRMSSE)"].melt(
         id_vars="Stratum", var_name="Model", value_name="RMSSE"
     )
@@ -451,7 +433,7 @@ with tab2:
 # ------------------------------------------------------------------------------
 with tab3:
     st.markdown("<div class='section-header'>Global Feature Importance & Predictor Insights</div>", unsafe_allow_html=True)
-    st.markdown("XGBoost importance weights showing key predictors driving daily sales forecasts across 30,490 series.")
+    st.markdown("XGBoost feature importance scores showing key predictors driving daily sales forecasts across 30,490 series.")
     
     feature_importance_data = {
         "Feature": [
@@ -511,13 +493,11 @@ with tab4:
     st.markdown("<div class='section-header'>Batch Replenishment & Purchase Order Export</div>", unsafe_allow_html=True)
     st.markdown(f"Automated reorder point calculation for representative inventory catalog at **{target_service_level:.1f}% Service Level** and **{lead_time_days}-Day Lead Time**.")
     
-    # Recalculate full inventory summary dataframe based on active scenario sliders
     export_df = inv_summary_df.copy()
     export_df["lead_time_days"] = lead_time_days
     export_df["target_service_level"] = f"{target_service_level:.1f}%"
     export_df["z_score"] = round(z_score, 2)
     
-    # Dynamic calculations
     daily_demands = export_df["forecast_28d"] / HORIZON
     lead_demands = daily_demands * lead_time_days
     safety_stocks = z_score * export_df["sigma"] * np.sqrt(lead_time_days / HORIZON)
@@ -541,14 +521,13 @@ with tab4:
         use_container_width=True
     )
     
-    # Export CSV Button
     csv_data = export_df.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="📥 Export Purchase Orders (CSV)",
+        label="Export Purchase Orders (CSV)",
         data=csv_data,
         file_name=f"walmart_purchase_orders_SLA{int(target_service_level)}pct_{lead_time_days}dayLT.csv",
         mime="text/csv",
-        help="Download dynamic purchase order recommendations CSV for supply chain execution."
+        help="Download purchase order recommendations CSV."
     )
 
 # ==============================================================================
@@ -556,7 +535,7 @@ with tab4:
 # ==============================================================================
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center; color: #8b949e; font-size: 0.85rem;">
-    Walmart Demand Forecasting & Inventory Optimization Engine | Built with PySpark, XGBoost & Streamlit
+<div style="text-align: center; color: #8b949e; font-size: 0.8rem;">
+    Walmart Demand Forecasting & Inventory Optimization Engine | PySpark, XGBoost & Streamlit
 </div>
 """, unsafe_allow_html=True)
